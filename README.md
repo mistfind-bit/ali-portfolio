@@ -11,7 +11,7 @@
 - 《這隻雞交給你了》：Godot 養成、多結局與生活互動遊戲，開發中
 - 阿梨股票小管家：Python / Streamlit 個人工具原型
 - 小欲狐桌寵：Python / Tkinter 桌面互動原型
-- 七年級英文教學系統：Python / JSON 自適應教學功能原型，目前尚未製作正式 UI
+- 蝦米英文 AI 家教｜七年級英文教學系統：HTML / JavaScript / Web Speech / localStorage，自適應題庫與中英文朗讀，可使用 Demo
 - 愛心記帳：HTML / CSS / JavaScript / PWA，可使用 Demo
 
 ## 遊戲原型
@@ -21,7 +21,8 @@
 - 《勇者不要再被拐走了！》劇情 / 角色設計原型
 
 ## Demo
-愛心記帳：<https://mistfind-bit.github.io/-love-ledger/>
+- 蝦米英文 AI 家教：<https://mistfind-bit.github.io/-love-ledger/xia-mi-english/>
+- 愛心記帳：<https://mistfind-bit.github.io/-love-ledger/>
 
 ## 說明
 這份作品集會明確標示每個專案的目前完成度。開發中作品不代表所有路線、功能或測試都已完整完成。
