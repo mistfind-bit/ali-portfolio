@@ -1,0 +1,100 @@
+name: Optimize portfolio images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/optimize-portfolio-images.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  optimize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Pillow
+        run: python -m pip install --upgrade pillow
+
+      - name: Optimize screenshots and update HTML
+        shell: python
+        run: |
+          from pathlib import Path
+          from PIL import Image, ImageOps
+
+          root = Path(".")
+          assets = root / "assets"
+          html_path = root / "index.html"
+
+          html = html_path.read_text(encoding="utf-8")
+          changed = []
+          kept = []
+
+          for src in sorted(assets.glob("*.png")):
+              with Image.open(src) as im:
+                  im = ImageOps.exif_transpose(im)
+
+                  # Keep screenshot detail readable, but avoid shipping multi-megapixel originals.
+                  max_width = 1600
+                  if im.width > max_width:
+                      new_h = round(im.height * max_width / im.width)
+                      im = im.resize((max_width, new_h), Image.Resampling.LANCZOS)
+
+                  if im.mode not in ("RGB", "RGBA"):
+                      im = im.convert("RGBA" if "transparency" in im.info else "RGB")
+
+                  dst = src.with_suffix(".webp")
+                  save_args = {"format": "WEBP", "quality": 84, "method": 6}
+                  if im.mode == "RGBA":
+                      save_args["lossless"] = False
+                  im.save(dst, **save_args)
+
+              old_size = src.stat().st_size
+              new_size = dst.stat().st_size
+
+              # Only switch when WebP gives a meaningful win.
+              if new_size < old_size * 0.92:
+                  html = html.replace(src.as_posix(), dst.as_posix())
+                  changed.append((src, dst, old_size, new_size))
+              else:
+                  dst.unlink(missing_ok=True)
+                  kept.append((src, old_size))
+
+          # Async decode reduces main-thread blocking while screenshots load.
+          html = html.replace(' loading="lazy">', ' loading="lazy" decoding="async">')
+          html_path.write_text(html, encoding="utf-8")
+
+          print("Converted:")
+          for src, dst, old, new in changed:
+              print(f"  {src.name}: {old/1024:.1f} KB -> {new/1024:.1f} KB")
+
+          print("Kept as PNG:")
+          for src, size in kept:
+              print(f"  {src.name}: {size/1024:.1f} KB")
+
+          # Remove originals only when the HTML actually switched to WebP.
+          for src, dst, old, new in changed:
+              src.unlink()
+
+      - name: Commit optimized assets
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No image optimization changes needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Optimize portfolio images for faster loading"
+          git push
